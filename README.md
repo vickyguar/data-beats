@@ -1,6 +1,16 @@
-# 📊 Ideas de análisis para un dataset de Spotify
+## Data Beats - Visualización Inteligente de Playlists y Análisis Descriptivo con Python
 
-## 📅 Análisis temporal
+Taller dictado en la XXIX Reunión Científico del Grupo Argentino de Bioestadística.
+**Profesores a Cargo del Taller**:
+- Mg. Natalia Rubio - *Prof. Departamento de Estadística y Diplomada en Cs. de Datos, UNCo.*
+- Prof. Sergio Ruminot - *Prof. Docente del Departamento de Estadística, UNCo.*
+- Lic. Javier Molina - *Prof. Docente del Departamento de Estadística, UNCo.*
+
+---
+
+### Ideas de análisis para un dataset de Spotify
+
+#### 📅 Análisis temporal
 1. **¿Cuándo se agregan más canciones?**
    - Distribución por **año, mes, día de la semana o hora del día**.
    - Comparación entre fines de semana y días laborales (`is_weekend`).
@@ -12,7 +22,7 @@
 
 ---
 
-## 🎶 Análisis de las canciones
+#### 🎶 Análisis de las canciones
 3. **Duración de las canciones**
    - Distribución de `duration_minutes`.
    - Preferencias por canciones más **cortas o largas** según el año.
@@ -27,7 +37,7 @@
 
 ---
 
-## 👥 Análisis colaborativo (si hay varios usuarios `added_by`)
+#### 👥 Análisis colaborativo (si hay varios usuarios `added_by`)
 6. **¿Quién agrega más canciones?**
    - Ranking de usuarios que más aportan.
    - Preferencias de cada usuario según duración o popularidad.
@@ -38,7 +48,7 @@
 
 ---
 
-## 👨‍🎤 Artistas y álbumes
+#### 👨‍🎤 Artistas y álbumes
 8. **Artistas más frecuentes**
    - Ranking de artistas en la playlist.
    - Evolución de la cantidad de canciones de cada artista a lo largo del tiempo.
@@ -49,7 +59,7 @@
 
 ---
 
-## 🚀 Preguntas más avanzadas
+#### 🚀 Preguntas más avanzadas
 10. **Recomendaciones basadas en gustos**
     - Identificación de **artistas emergentes** (baja popularidad pero recurrentes).
     - Patrones de agregado: ¿cuándo aparecen más canciones largas o poco populares?
