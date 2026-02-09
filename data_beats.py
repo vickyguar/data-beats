@@ -1,9 +1,26 @@
+# TODO 
+# - Agregar type hints y docstrings
+# - Agregar regions
+# pensar en nuevos analsis
+# sacar info
+
+
+
 import time
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
+from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
+
+
+def normalize_features(df, feature_cols):
+    scaler = MinMaxScaler()
+    df_scaled = df.copy()
+    df_scaled[feature_cols] = scaler.fit_transform(df[feature_cols])
+    return df_scaled
 
 
 def get_all_playlist_tracks(sp, playlist_id):
@@ -216,18 +233,18 @@ def analyze_user_spotify(sp, user_id):
 
     print("\n📈 Análisis de hábitos del usuario")
 
-    plt.figure(figsize=(10,5))
+    plt.figure()
     sns.countplot(x='added_weekday', data=df_all_tracks, order=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
     plt.title(f'Canciones agregadas por día de la semana - {username}')
     plt.show()
 
-    plt.figure(figsize=(10,5))
+    plt.figure()
     sns.countplot(x='added_hour', data=df_all_tracks)
     plt.title(f'Canciones agregadas por hora - {username}')
     plt.show()
 
     top_artists = df_all_tracks['artists'].value_counts().head(10)
-    plt.figure(figsize=(10,5))
+    plt.figure()
     sns.barplot(y=top_artists.index, x=top_artists.values)
     plt.title(f'Top 10 artistas - {username}')
     plt.xlabel('Cantidad de canciones')
@@ -254,3 +271,54 @@ def analyze_user_spotify(sp, user_id):
         'all_tracks': df_all_tracks,
         'recommendations': df_recs
     }
+  
+  
+def playlist_features(df):
+    grouped = df.groupby("playlist_name")
+
+    features = grouped.apply(lambda x: pd.Series({
+        "duracion_total_min": x["duration_minutes"].sum(),
+        "duracion_media_tema": x["duration_minutes"].mean(),
+        "popularidad_media": x["popularity"].mean(),
+        "ratio_explicito": x["explicit"].mean(),
+
+        # proxies
+        "alegria_proxy": (
+            x["popularity"].mean() * (1 - x["explicit"].mean())
+        ),
+        "energia_proxy": (
+            (1 / x["duration_minutes"].mean()) * (1 + x["explicit"].mean())
+        )
+    }))
+
+    return features.reset_index()
+
+
+def radar_playlists(df, feature_cols):
+    labels = feature_cols
+    num_vars = len(labels)
+
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+    angles += angles[:1]
+
+    fig, ax = plt.subplots(subplot_kw=dict(polar=True))
+
+    for _, row in df.iterrows():
+        values = row[feature_cols].tolist()
+        values += values[:1]
+
+        ax.plot(angles, values, linewidth=2, label=row["playlist_name"])
+        ax.fill(angles, values, alpha=0.1)
+
+    ax.set_thetagrids(np.degrees(angles[:-1]), labels)
+    ax.tick_params(axis="x", pad=18)
+    ax.set_title("Comparación de Playlists", pad=10)
+
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.1),
+        ncol=2,
+        frameon=False
+    )
+
+    plt.show()
