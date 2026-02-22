@@ -21,7 +21,7 @@ En el taller aprendimos a extraer dataframes a partir de playlist de Spotify usa
     pip install -r requirements.txt
     ```
 3. Obtener Credenciales de Spotify
-    1. Entrar en [developer.spotify.com](https://developer.spotify.com/)
+    1. Entrar a [developer.spotify.com](https://developer.spotify.com/)
     2. Iniciar sesión con la cuenta de sopify
     3. Ir al Dashboard y crear una nueva aplicación
     4. Copiar el `Client ID` y `Client Secret`
