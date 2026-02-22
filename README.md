@@ -52,6 +52,4 @@ En el taller aprendimos a extraer dataframes a partir de playlist de Spotify usa
 
 ## Gráfico de radar
 
-Comparación de playlists de un usuario con dimensiones normalizadas:
-
 ![radar](images/radar.png)
