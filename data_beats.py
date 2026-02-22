@@ -1,11 +1,4 @@
-# TODO 
-# - Agregar type hints y docstrings
-# - Agregar regions
-# pensar en nuevos analsis
-# sacar info
-
-
-
+from typing import Dict, List, Tuple, Any
 import time
 
 import matplotlib.pyplot as plt
@@ -14,31 +7,38 @@ import pandas as pd
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
+from spotipy import Spotify
 
 
-def normalize_features(df, feature_cols):
-    scaler = MinMaxScaler()
-    df_scaled = df.copy()
-    df_scaled[feature_cols] = scaler.fit_transform(df[feature_cols])
-    return df_scaled
-
-
-def get_all_playlist_tracks(sp, playlist_id):
-    # Función para obtener TODAS las canciones de una playlist
+def get_all_playlist_tracks(sp: Spotify, playlist_id: str) -> Tuple[List[Dict[str, Any]], str]:
+    """
+    Obtener todas las canciones de una playlist de Spotify.
+    
+    Obtiene datos completos de la playlist respetando límites de la API.
+    
+    Args:
+        sp: instancia del cliente Spotify autenticada.
+        playlist_id: el ID de la playlist de Spotify.
+        
+    Returns:
+        Tupla que contiene:
+        - lista de items de canciones con metadatos.
+        - nombre de la playlist.
+    """
     all_tracks = []
     offset = 0
-    limit = 100  # Máximo por solicitud
+    limit = 100  # máximo por solicitud
 
-    # Obtener info básica de la playlist
+    # obtener info básica de la playlist
     playlist_info = sp.playlist(playlist_id, fields='name,tracks.total')
     playlist_name = playlist_info['name']
     total_tracks = playlist_info['tracks']['total']
 
-    print(f"🎵 Playlist: {playlist_name}")
-    print(f"📊 Total de canciones: {total_tracks}")
-    print("⏳ Extrayendo todas las canciones...\n")
+    print(f"Playlist: {playlist_name}")
+    print(f"Total de canciones: {total_tracks}")
+    print("Extrayendo todas las canciones...\n")
 
-    # Extraer con paginación
+    # extraer con paginación
     with tqdm(total=total_tracks, desc="Extrayendo") as pbar:
         while True:
             response = sp.playlist_items(
@@ -48,38 +48,47 @@ def get_all_playlist_tracks(sp, playlist_id):
                 offset=offset
             )
 
-            # Si no hay más canciones, terminar
+            # si no hay más canciones, terminar
             if not response['items']:
                 break
 
-            # Agregar a la lista
+            # agregar a la lista
             all_tracks.extend(response['items'])
             pbar.update(len(response['items']))
 
-            # Siguiente página
+            # siguiente página
             offset += limit
-            time.sleep(0.1)  # Pausa para evitar rate limiting
+            time.sleep(0.1)  # pausa para evitar rate limiting
 
-    print(f"✅ {len(all_tracks)} canciones extraídas exitosamente")
+    print(f"Se extrajeron exitosamente {len(all_tracks)} canciones")
     
     return all_tracks, playlist_name
 
 
-def create_df(all_tracks):
+def create_df(all_tracks: List[Dict[str, Any]]) -> pd.DataFrame:
+    """
+    Transformar datos crudos de canciones de Spotify en un DataFrame.
+    
+    Args:
+        all_tracks: lista de items de canciones de la API de Spotify.
+        
+    Returns:
+        DataFrame con información procesada de canciones y características temporales.
+    """
     data = []
     for item in tqdm(all_tracks, desc="Procesando datos"):
-        # Verificar que la canción no sea None (a veces pasa)
+        # verificar que la canción no sea None (a veces pasa)
         if item['track'] is None:
             continue
 
         track = item['track']
 
-        # Procesar la fecha added_at
+        # procesar datetime added_at
         added_at_str = item['added_at']
         added_at_dt = pd.to_datetime(added_at_str)
 
         data.append({
-            # Información temporal
+            # info temporal
             'added_at_original': added_at_str,
             'added_date': added_at_dt.date(),
             'added_year': added_at_dt.year,
@@ -90,7 +99,7 @@ def create_df(all_tracks):
             'added_month_name': added_at_dt.month_name(),
             'is_weekend': added_at_dt.weekday() >= 5,
 
-            # Información de la canción
+            # info de la canción
             'added_by': item['added_by']['id'] if item['added_by'] else 'Unknown',
             'track_id': track['id'],
             'title': track['name'],
@@ -104,31 +113,43 @@ def create_df(all_tracks):
             'track_number': track['track_number']
         })
 
-    # Crear DataFrame
+    # crear DataFrame
     df = pd.DataFrame(data)
 
-    print("🎉 DataFrame final creado")
+    print("DataFrame creado exitosamente")
     
     return df
 
 
-def get_user_public_playlists(sp, user_id):
+def get_user_public_playlists(sp: Spotify, user_id: str) -> Tuple[pd.DataFrame, str]:
+    """
+    Obtener todas las playlists PÚBLICAS!! de un usuario de Spotify.
+    
+    Args:
+        sp: instancia del cliente Spotify autenticada.
+        user_id: el ID del usuario de Spotify.
+        
+    Returns:
+        Tupla que contiene:
+        - dataFrame con información de playlists (ID, nombre, cantidad de canciones, propietario).
+        - nombre de usuario.
+    """
     user_info = sp.user(user_id)
     username = user_info.get('display_name', user_id)
 
-    print(f"👤 Usuario: {username}")
-    print("⏳ Extrayendo playlists públicas...\n")
+    print(f"Usuario: {username}")
+    print("Extrayendo playlists públicas...\n")
 
     playlists = []
     offset = 0
     limit = 50
 
-    # Primera llamada para saber el total
+    # primera llamada para saber el total
     first_response = sp.user_playlists(user_id, limit=limit, offset=offset)
     total_playlists = first_response['total']
     playlists.extend(first_response['items'])
 
-    with tqdm(total=total_playlists, desc="📀 Playlists") as pbar:
+    with tqdm(total=total_playlists, desc="Playlists") as pbar:
         pbar.update(len(first_response['items']))
 
         while first_response['next'] is not None:
@@ -152,14 +173,24 @@ def get_user_public_playlists(sp, user_id):
 
     df_playlists = pd.DataFrame(data)
 
-    print(f"✅ {len(df_playlists)} playlists públicas extraídas exitosamente")
+    print(f"Se extrajeron exitosamente {len(df_playlists)} playlists públicas")
 
     return df_playlists, username
 
 
+def recommend_from_artists(sp: Spotify, df_user_tracks: pd.DataFrame, limit_per_artist: int = 2, max_artists: int = 5) -> pd.DataFrame:
+    """
+    Generar recomendaciones de canciones basadas en los principales artistas del usuario.
 
-
-def recommend_from_artists(sp, df_user_tracks, limit_per_artist=2, max_artists=5):
+    Args:
+        sp: instancia del cliente Spotify autenticada.
+        df_user_tracks: DataFrame que contiene el historial de canciones del usuario.
+        limit_per_artist: cantidad máxima de recomendaciones por artista.
+        max_artists: cantidad de principales artistas a considerar para recomendaciones.
+        
+    Returns:
+        DataFrame con canciones recomendadas (ID, título, artistas, popularidad).
+    """
     listened_tracks = set(df_user_tracks["track_id"].dropna())
 
     top_artists = (
@@ -212,30 +243,42 @@ def recommend_from_artists(sp, df_user_tracks, limit_per_artist=2, max_artists=5
     )
 
 
-
-def analyze_user_spotify(sp, user_id):
+def analyze_user_spotify(sp: Spotify, user_id: str) -> Dict[str, Any]:
+    """
+    Análisis GLOBAL de las playlists y hábitos de escucha de un usuario de Spotify.
     
+    Args:
+        sp: instancia del cliente Spotify autenticada.
+        user_id: el ID del usuario de Spotify.
+        
+    Returns:
+        Diccionario que contiene:
+        - username: nombre de usuario.
+        - playlists: DataFrame con información de playlists.
+        - all_tracks: DataFrame con todas las canciones de todas las playlists.
+        - recommendations: DataFrame con canciones recomendadas.
+    """
     df_playlists, username = get_user_public_playlists(sp, user_id)
 
-    print(f"\n📊 Usuario {username} tiene {len(df_playlists)} playlists públicas")
+    print(f"\nUsuario {username} tiene {len(df_playlists)} playlists públicas")
 
     all_tracks_df_list = []
 
-    for idx, row in df_playlists.iterrows():
-        print(f"\n🔹 Extrayendo playlist: {row['playlist_name']}")
+    for _, row in df_playlists.iterrows():
+        print(f"\nExtrayendo playlist: {row['playlist_name']}")
         all_tracks, _ = get_all_playlist_tracks(sp, row['playlist_id'])
         df_tracks = create_df(all_tracks)
         df_tracks['playlist_name'] = row['playlist_name']
         all_tracks_df_list.append(df_tracks)
 
     df_all_tracks = pd.concat(all_tracks_df_list, ignore_index=True)
-    print(f"\n🎉 Total canciones analizadas: {len(df_all_tracks)}")
+    print(f"\nTotal de canciones analizadas: {len(df_all_tracks)}")
 
-    print("\n📈 Análisis de hábitos del usuario")
+    print("\nAnalizando hábitos del usuario...")
 
     plt.figure()
     sns.countplot(x='added_weekday', data=df_all_tracks, order=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
-    plt.title(f'Canciones agregadas por día de la semana - {username}')
+    plt.title(f'Canciones agregadas por día de semana - {username}')
     plt.show()
 
     plt.figure()
@@ -250,7 +293,7 @@ def analyze_user_spotify(sp, user_id):
     plt.xlabel('Cantidad de canciones')
     plt.show()
 
-    print("\n🎯 Generando recomendaciones...")
+    print("\nGenerando recomendaciones...")
 
     top_tracks = df_all_tracks.sort_values(by='popularity', ascending=False)['track_id'].head(5).tolist()
 
@@ -263,7 +306,7 @@ def analyze_user_spotify(sp, user_id):
             artist_seeds.append(res['artists']['items'][0]['id'])
 
     df_recs = recommend_from_artists(sp, df_all_tracks)
-    print(f"✅ Se generaron {len(df_recs)} recomendaciones para {username}")
+    print(f"Se generaron exitosamente {len(df_recs)} recomendaciones para {username}")
 
     return {
         'username': username,
@@ -271,9 +314,23 @@ def analyze_user_spotify(sp, user_id):
         'all_tracks': df_all_tracks,
         'recommendations': df_recs
     }
-  
-  
-def playlist_features(df):
+
+
+#region GRAFICO DE RADAR
+
+def playlist_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Extraer y calcular características agregadas para cada playlist.
+    
+    Calcula duración, popularidad y métricas proxy personalizadas (alegría, energía)
+    para cada playlist en el dataset.
+    
+    Args:
+        df: DataFrame con información de canciones agrupado por playlist.
+        
+    Returns:
+        DataFrame con una fila por playlist que contiene características calculadas.
+    """
     grouped = df.groupby("playlist_name")
 
     features = grouped.apply(lambda x: pd.Series({
@@ -282,7 +339,8 @@ def playlist_features(df):
         "popularidad_media": x["popularity"].mean(),
         "ratio_explicito": x["explicit"].mean(),
 
-        # proxies
+        # !!!! METRICAS PROXY A REVISAR → pueden estar muy mal y ser engañosas
+        # TODO: hace falta investigar mejores formas de medir alegría y energía... 
         "alegria_proxy": (
             x["popularity"].mean() * (1 - x["explicit"].mean())
         ),
@@ -294,7 +352,20 @@ def playlist_features(df):
     return features.reset_index()
 
 
-def radar_playlists(df, feature_cols):
+def radar_playlists(df: pd.DataFrame, feature_cols: List[str]) -> None:
+    """
+    Crear un gráfico de radar comparando playlists en múltiples características.
+    
+    Visualiza características normalizadas para cada playlist en un gráfico de radar
+    multi-eje para fácil comparación.
+    
+    Args:
+        df: DataFrame con características normalizadas de playlists.
+        feature_cols: Lista de nombres de columnas de características a mostrar en el radar.
+        
+    Returns:
+        None. Muestra el gráfico.
+    """
     labels = feature_cols
     num_vars = len(labels)
 
@@ -322,3 +393,25 @@ def radar_playlists(df, feature_cols):
     )
 
     plt.show()
+
+
+def normalize_features(df: pd.DataFrame, feature_cols: List[str]) -> pd.DataFrame:
+    """
+    Normalizar características especificadas en un DataFrame con MinMaxScaler.
+    
+    Escala las columnas de características al rango [0, 1] manteniendo la estructura
+    del DataFrame original.
+    
+    Args:
+        df: DataFrame de entrada que contiene las características a normalizar.
+        feature_cols: lista de nombres de columnas a normalizar.
+        
+    Returns:
+        DataFrame con características normalizadas.
+    """
+    scaler = MinMaxScaler()
+    df_scaled = df.copy()
+    df_scaled[feature_cols] = scaler.fit_transform(df[feature_cols])
+    return df_scaled
+
+#endregion
