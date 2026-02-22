@@ -16,7 +16,7 @@ En el taller aprendimos a extraer dataframes a partir de playlist de Spotify usa
     cd data-beats
     ```
 
-2. Instalar requirements (armar previamente un entorno antes)
+2. Instalar requirements (armar previamente un entorno)
     ```bash
     pip install -r requirements.txt
     ```
